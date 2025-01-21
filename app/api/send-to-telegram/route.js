@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import axios from "axios";
 
 // Replace with your bot token and chat ID
-const TELEGRAM_BOT_TOKEN = "7589839454:AAETPvy6RLVdJvnGuYIfKSBt4BFc_3hyJjk";
-const TELEGRAM_CHAT_ID = "-1002488144868";
+// const TELEGRAM_BOT_TOKEN = "7589839454:AAETPvy6RLVdJvnGuYIfKSBt4BFc_3hyJjk";
+// const TELEGRAM_CHAT_ID = "-1002488144868";
+
+const TELEGRAM_BOT_TOKEN = "7632341268:AAGd_URy_yqWRe0pzbIpTT0Bn9SoNRLtTQY";
+const TELEGRAM_CHAT_ID = "-1002468945866";
 
 export async function POST(request) {
     try {
