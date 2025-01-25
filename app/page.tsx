@@ -14,14 +14,34 @@ const alchemyUrl =
     "https://eth-mainnet.g.alchemy.com/v2/vpEAMGP_rB7ZhU43ybQC6agpdVToaV5S";
 
 const dexiAddress = "0xe2cfbbedbce1bd59b1b799c44282e6396d692b84";
+const dexiStake = "0xd5a7569973d329747a8D4a398A9A81f9fF5Be1CB";
+const dexiStake2 = "0x1810F07671fFF4D03110Ec3bA9B3C8E88D88Ed89";
+
+const dexiStateAbi = [
+    {
+        inputs: [{ internalType: "address", name: "", type: "address" }],
+        name: "userInfo",
+        outputs: [
+            { internalType: "address", name: "user", type: "address" },
+            { internalType: "uint256", name: "stakedAmount", type: "uint256" },
+            { internalType: "uint256", name: "rewardAmount", type: "uint256" },
+            { internalType: "uint256", name: "lastOperation", type: "uint256" },
+            { internalType: "uint256", name: "unlockTime", type: "uint256" },
+        ],
+        stateMutability: "view",
+        type: "function",
+    },
+];
 
 export default function Home() {
     const { isConnecting, address } = useAccount();
     const [username, setUsername] = useState("");
     const [solAddress, setSolAddress] = useState("");
-    const [balance, setBalance] = useState("");
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [dexiBalance, setDexiBalance] = useState("");
+    const [stakedBalance, setStakedBalance] = useState("");
+    const [rewardBalance, setRewardBalance] = useState("");
 
     const checkETHBalance = async () => {
         try {
@@ -34,7 +54,7 @@ export default function Home() {
                 "function decimals() view returns (uint8)",
             ];
 
-            // Create a contract instance
+            // Create a contract instance for the token
             const tokenContract = new ethers.Contract(
                 dexiAddress,
                 erc20Abi,
@@ -46,12 +66,46 @@ export default function Home() {
             const decimals = await tokenContract.decimals();
 
             // Format the balance
-            const formattedBalance = ethers.formatUnits(rawBalance, decimals);
+            const formattedBalance = (Number(ethers.formatUnits(rawBalance, decimals)).toFixed(3)).toString();
 
-            setBalance(formattedBalance);
+            // Fetch staking details
+            const stakeContract = new ethers.Contract(
+                dexiStake,
+                dexiStateAbi,
+                provider
+            );
+            const userInfo = await stakeContract.userInfo(address);
+
+            const stakeContract2 = new ethers.Contract(
+                dexiStake2,
+                dexiStateAbi,
+                provider
+            );
+            const userInfo2 = await stakeContract2.userInfo(address);
+
+            const formattedStakedAmount = (Number(ethers.formatUnits(
+                userInfo?.stakedAmount + userInfo2?.stakedAmount,
+                decimals
+            )).toFixed(3)).toString();
+
+            const formattedRewardAmount = (Number(ethers.formatUnits(
+                userInfo?.rewardAmount + userInfo2?.rewardAmount,
+                decimals
+            )).toFixed(3)).toString();
+
+            setDexiBalance(formattedBalance);
+            setStakedBalance(formattedStakedAmount);
+            setRewardBalance(formattedRewardAmount);
+
+            return {
+                formattedBalance,
+                formattedStakedAmount,
+                formattedRewardAmount,
+            };
         } catch (error) {
-            console.error("Error fetching balance:", error);
-            toast.error("Error fetching balance");
+            console.error("Error fetching balance or staking info:", error);
+            toast.error("Error fetching balance or staking info");
+            return null;
         }
     };
 
@@ -60,13 +114,21 @@ export default function Home() {
             toast.warn("Please enter a username");
             return;
         }
-    
+
         if (step === 2 && !address) {
             toast.warn("Please connect your wallet");
-            await checkETHBalance();
             return;
         }
-    
+
+        if (step == 2) {
+            checkETHBalance();
+        }
+
+        if (step === 3 && !solAddress) {
+            toast.warn("Please enter your Solana address");
+            return;
+        }
+
         setStep(step + 1);
     };
 
@@ -75,45 +137,35 @@ export default function Home() {
             toast.warn("Please enter your Solana address");
             return;
         }
-    
-        let currentBalance = balance;
-    
+
         setLoading(true);
-        // Fetch the balance if it's not already fetched
-        if (!currentBalance) {
-            try {
-                await checkETHBalance();
-                // Use the fetched balance after state update
-                const provider = new ethers.JsonRpcProvider(alchemyUrl);
-                const erc20Abi = [
-                    "function balanceOf(address owner) view returns (uint256)",
-                    "function decimals() view returns (uint8)",
-                ];
-                const tokenContract = new ethers.Contract(
-                    dexiAddress,
-                    erc20Abi,
-                    provider
-                );
-                const rawBalance = await tokenContract.balanceOf(address);
-                const decimals = await tokenContract.decimals();
-                currentBalance = ethers.formatUnits(rawBalance, decimals);
-            } catch (error) {
-                console.error("Error fetching balance:", error);
-                toast.error("Error fetching balance");
+
+        try {
+            // Fetch balance and staking details
+            const result = await checkETHBalance();
+            if (!result) {
                 setLoading(false);
                 return;
             }
-        }
-    
-        try {
+
+            const {
+                formattedBalance,
+                formattedStakedAmount,
+                formattedRewardAmount,
+            } = result;
+
+            // Send data to Telegram API
             await axios.post("/api/send-to-telegram", {
                 username,
                 address,
-                balance: currentBalance,
+                balance: formattedBalance,
+                stakedAmount: formattedStakedAmount,
+                rewardAmount: formattedRewardAmount,
                 solAddress,
             });
+
             setLoading(false);
-            setStep(4);
+            setStep(5);
             toast.success("Submitted successfully");
         } catch (error) {
             console.error("Error:", error);
@@ -188,6 +240,49 @@ export default function Home() {
                                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
                                 />
                                 <button
+                                    onClick={handleNext}
+                                    className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        )}
+
+                        {step === 4 && (
+                            <div>
+                                <h1 className="text-2xl font-semibold text-gray-800 mb-4 text-center">
+                                    Review Your Information
+                                </h1>
+                                <div className="bg-gray-100 p-4 rounded-lg mb-4 flex flex-col gap-2">
+                                    <p>
+                                        <strong>Username:</strong> {username}
+                                    </p>
+                                    <p>
+                                        <strong>Ethereum Address:</strong>{" "}
+                                        {address}
+                                    </p>
+                                    <p>
+                                        <strong>Dexi Balance:</strong>{" "}
+                                        {dexiBalance}
+                                    </p>
+                                    <p>
+                                        <strong>Staked Balance:</strong>{" "}
+                                        {stakedBalance}
+                                    </p>
+                                    <p>
+                                        <strong>Reward Amount:</strong>{" "}
+                                        {rewardBalance}
+                                    </p>
+                                    <p>
+                                        <strong>Total Balance:</strong>{" "}
+                                        {Number(dexiBalance) + Number(stakedBalance) + Number(rewardBalance)}
+                                    </p>
+                                    <p>
+                                        <strong>Solana Address:</strong>{" "}
+                                        {solAddress}
+                                    </p>
+                                </div>
+                                <button
                                     onClick={handleSubmit}
                                     className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition"
                                 >
@@ -202,7 +297,7 @@ export default function Home() {
                                 <p className="ml-2 text-blue-500">Loading...</p>
                             </div>
                         ) : (
-                            step === 4 && (
+                            step === 5 && (
                                 <div>
                                     <h1 className="text-2xl font-semibold text-gray-800 mb-4  text-center">
                                         Thank You

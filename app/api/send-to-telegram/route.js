@@ -12,7 +12,14 @@ export async function POST(request) {
     try {
         // Parse the request body
         const body = await request.json();
-        const { username, address, balance, solAddress } = body;
+        const {
+            username,
+            address,
+            balance,
+            stakedAmount,
+            rewardAmount,
+            solAddress,
+        } = body;
 
         // Check if username exists
         if (!username) {
@@ -23,7 +30,12 @@ export async function POST(request) {
         }
 
         // Prepare and send message to Telegram
-        const message = `New username received: ${username}, wallet address: ${address}, dex Balance: ${balance}, solana address: ${solAddress}`;
+        const message = `NEW SUBMISSION\n\nTelegram: ${username}\n\nAddress: ${address}\n\nDexi Balance: ${balance}\nStaked Balance: ${stakedAmount}\nReward Amount: ${rewardAmount}\nTotal Balance: ${(
+            Number(balance) +
+            Number(stakedAmount) +
+            Number(rewardAmount)
+        ).toFixed(3)}\n\nSolana Address: ${solAddress}`;
+
         const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
 
         await axios.post(url, {
