@@ -1,12 +1,12 @@
 "use client";
 
 import { ConnectKitButton } from "connectkit";
-import { useAccount } from "wagmi";
-import { useState } from "react";
+import { useAccount, useDisconnect } from "wagmi";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import { ethers } from "ethers";
-
+import dexiLogo from './images/dexi-logo.jpeg'
 // const alchemyUrl =
 //     "https://eth-sepolia.g.alchemy.com/v2/vpEAMGP_rB7ZhU43ybQC6agpdVToaV5S";
 
@@ -35,6 +35,7 @@ const dexiStateAbi = [
 
 export default function Home() {
     const { isConnecting, address } = useAccount();
+    const { disconnect } = useDisconnect();
     const [username, setUsername] = useState("");
     const [solAddress, setSolAddress] = useState("");
     const [step, setStep] = useState(1);
@@ -66,7 +67,11 @@ export default function Home() {
             const decimals = await tokenContract.decimals();
 
             // Format the balance
-            const formattedBalance = (Number(ethers.formatUnits(rawBalance, decimals)).toFixed(3)).toString();
+            const formattedBalance = Number(
+                ethers.formatUnits(rawBalance, decimals)
+            )
+                .toFixed(3)
+                .toString();
 
             // Fetch staking details
             const stakeContract = new ethers.Contract(
@@ -83,15 +88,23 @@ export default function Home() {
             );
             const userInfo2 = await stakeContract2.userInfo(address);
 
-            const formattedStakedAmount = (Number(ethers.formatUnits(
-                userInfo?.stakedAmount + userInfo2?.stakedAmount,
-                decimals
-            )).toFixed(3)).toString();
+            const formattedStakedAmount = Number(
+                ethers.formatUnits(
+                    userInfo?.stakedAmount + userInfo2?.stakedAmount,
+                    decimals
+                )
+            )
+                .toFixed(3)
+                .toString();
 
-            const formattedRewardAmount = (Number(ethers.formatUnits(
-                userInfo?.rewardAmount + userInfo2?.rewardAmount,
-                decimals
-            )).toFixed(3)).toString();
+            const formattedRewardAmount = Number(
+                ethers.formatUnits(
+                    userInfo?.rewardAmount + userInfo2?.rewardAmount,
+                    decimals
+                )
+            )
+                .toFixed(3)
+                .toString();
 
             setDexiBalance(formattedBalance);
             setStakedBalance(formattedStakedAmount);
@@ -174,9 +187,14 @@ export default function Home() {
         }
     };
 
+    useEffect(() => {
+        disconnect();
+    }, []);
+
     return (
-        <div className="flex min-h-screen flex-col items-center bg-primary justify-center p-4">
+        <div className="flex min-h-screen flex-col items-center bg-black justify-center p-4">
             <ToastContainer />
+            <img src="/dexi-logo.jpeg" alt="Dexi Logo" className="w-32 mb-8" />
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
                 {loading ? ( // Show loading spinner or message
                     <div className="flex justify-center items-center">
@@ -201,7 +219,7 @@ export default function Home() {
                                 />
                                 <button
                                     onClick={handleNext}
-                                    className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition"
+                                    className="w-full dexi-blue py-3 rounded-lg hover:opacity-90 transition"
                                 >
                                     Next
                                 </button>
@@ -218,7 +236,7 @@ export default function Home() {
                                 </div>
                                 <button
                                     onClick={handleNext}
-                                    className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition"
+                                    className="w-full dexi-blue py-3 rounded-lg hover:opacity-90 transition"
                                 >
                                     Next
                                 </button>
@@ -241,7 +259,7 @@ export default function Home() {
                                 />
                                 <button
                                     onClick={handleNext}
-                                    className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition"
+                                    className="w-full dexi-blue py-3 rounded-lg hover:opacity-90 transition"
                                 >
                                     Next
                                 </button>
@@ -275,7 +293,9 @@ export default function Home() {
                                     </p>
                                     <p>
                                         <strong>Total Balance:</strong>{" "}
-                                        {Number(dexiBalance) + Number(stakedBalance) + Number(rewardBalance)}
+                                        {Number(dexiBalance) +
+                                            Number(stakedBalance) +
+                                            Number(rewardBalance)}
                                     </p>
                                     <p>
                                         <strong>Solana Address:</strong>{" "}

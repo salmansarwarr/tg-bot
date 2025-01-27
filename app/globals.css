@@ -6,6 +6,11 @@
   background-color: #030717;
 }
 
+.dexi-blue {
+    background-color: #00f0ff;  /* Adjust this hex color to match your logo exactly */
+    color: black;  /* Text color */
+}
+
 @keyframes scroll-down {
   0% {
     /* top:20%; */
